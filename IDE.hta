@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>HTA Form Designer</title>
+    <HTA:APPLICATION 
+        ID="FormDesigner"
+        APPLICATIONNAME="FormDesigner"
+        BORDER="thin"
+        CAPTION="yes"
+        SHOWINTASKBAR="yes"
+        SINGLEINSTANCE="yes"
+        SYSMENU="yes"
+        WINDOWSTATE="maximize"
+		resizable="yes"
+	/>
+
+<style type="text/css">     
+body
+{
+    font-family: 'MS Reference Sans Serif';
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    display: flex;
+    height: 100vh;
+	overflow-y:auto;
+}
+
+/* Panel ayarları */
+.panel {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 230px;
+}
+
+#toolbox, #properties {
+    flex-shrink: 0; /* Sabit genişlik sağlar */
+    margin-left: 10px;
+}
+
+#toolbox {
+    margin-top: 10px;
+}
+
+#properties {
+    margin-top: 20px;
+}
+
+/* Tasarım alanı */
+#design-area 
+{
+	position: absolute;
+	left: 300px;
+	top: 75px;
+    width: 80%;
+	height: 705px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: 20px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Başlık stili */
+.panel-header {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+/* Toolbox ve Properties içerik */
+.panel-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-body button {
+    margin-bottom: 10px;
+}
+
+/* Nesne stilleri */
+.button 
+{
+    border: none;
+    padding: 8px 16px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 14px;
+	font-family:'MS Reference Sans Serif';
+	font-weight:bold;
+	width:200px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+}
+
+.button.default
+{
+    background-color: #4CAF50;
+    color: white;
+}
+
+.button.approval
+{
+	background-color: blue;
+	color:white;
+}
+
+.button.cancel
+{
+    background-color: maroon; 
+	color: white;
+}
+
+.button.cancel:hover, .button.default:hover, .button.approval:hover
+{
+    background-color: whitesmoke;
+	color: black;
+	border-color:black;
+	border:outset;
+}
+
+
+
+input[type="text"], textarea, select 
+{
+    width: calc(100% - 24px);
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+	background-color:ivory;	border-color:gray;
+}
+
+input[type="checkbox"], input[type="radio"] {
+    margin-right: 10px;
+}
+
+table 
+{
+    background-color: azure;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.draggable 
+ {
+    position: absolute;
+	padding: 5px;
+    border: 1px solid #000;
+ }
+ 
+ .tasarim
+ {
+	z-index:2; visibility:visible; position:absolute; left:0px; top:41px; width:100%; height:30px; text-align:center; background-color:maroon;
+ }
+</style>
+
+    <script type="text/javascript">
+        var selectedElement = null;
+		var kods = [];
+		var ids = [];
+		var secilihucre = undefined;
+function addElement(type, dom, id, hucre) 
+{
+    var element = document.createElement(dom);
+    if (id !== "" && id !== undefined)  { element.id = id; } else { element.id = "dom" + document.getElementsByTagName("*").length.toString(); }
+	if (hucre === "" || hucre === undefined)
+	{
+		element.className = 'draggable';
+		element.style.left = '10px';
+		element.style.top = '10px';
+	}
+	
+    kods.push("");
+    ids.push(element.id);
+	
+    switch(type)
+	{
+        case 'label':
+            element.innerText = 'Label';
+            break;
+        case 'text':
+            element.type = type;
+            break;
+		case 'password':
+            element.type = type;
+            break;	
+        case 'button':
+            element.value = 'Button';
+            element.type = type;
+            element.className = 'draggable button default';
+            break;
+		case 'select':
+			element.style.width = "200px";
+			element.style.height = "33px";
+			break;
+        case 'table':
+            var tr = document.createElement("tr");
+            var td = document.createElement("td");
+            var lbl = document.createElement("label");
+			var tbody = document.createElement("tbody");
+            lbl.innerText = "TABLO";
+			lbl.style.color = "black";
+            td.appendChild(lbl);
+            tr.appendChild(td);
+			element.border = "1";
+			element.style.visibility = "visible";
+            tbody.appendChild(tr);
+			element.appendChild(tbody);
+			element.style.display = "block";
+			element.style.left = "100px";
+            element.style.width = '150px';
+            element.style.height = '50px';
+            break;
+		case 'a':
+			element.innerText = 'link';
+			element.href = '#';
+			break;
+        case 'input_radio':
+            element.type = 'radio';
+            break;
+        case 'input_checkbox':
+            element.type = 'checkbox';
+            break;
+    }
+	
+	element.onmouseover = function(event)
+	{
+		if (divtasarim.style.visibility === "visible")
+		{
+			element.style.cursor = "move";
+		}
+		else
+		{
+			element.style.cursor = "pointer";
+		}
+	};
+
+    element.onclick = function(event) 
+    {
+		if (divtasarim.style.visibility === "visible")
+		{
+         selectElement(element);
+         return false;
+		}
+		else
+		{
+			setTimeout(function() { ExecuteVBS(element.id); }, 0); 
+		}
+    };
+
+	if (hucre === "" || hucre === undefined)
+	{
+    element.onmousedown = function(event) 
+    {
+		if (divtasarim.style.visibility === "visible")
+		{
+         dragElement(event, element);
+         return false;
+		}
+    };
+	}
+	
+	if (hucre !== "" && hucre !== undefined)
+	{
+		document.getElementById(hucre).appendChild(element);
+	}
+	else
+	{
+		document.getElementById('design-area').appendChild(element);
+	}
+    selectElement(element);
+}
+
+
+        function selectElement(element)
+		{
+            selectedElement = element;
+			txtid.value = element.id;
+			if (element.tagName.toLowerCase() === "img")
+			{
+				txtsrc.value = element.src;
+			}
+			else
+			{
+				txtsrc.value = "";
+			}
+			
+			if (element.tagName.toLowerCase() === "table")
+			{
+				txtsatir.value = element.rows.length.toString();
+				txtsutun.value = element.rows[0].cells.length.toString();
+			}
+			else
+			{
+				txtsatir.value = "";
+				txtsutun.value = "";
+			}
+            document.getElementById('propLeft').value = element.style.left;
+            document.getElementById('propTop').value = element.style.top;
+            document.getElementById('propWidth').value = element.style.width;
+            document.getElementById('propHeight').value = element.style.height;
+			txtcss.value = element.className;
+			txtrenk.value = element.style.color;
+			txtarkaplan.value = element.style.backgroundColor;
+            if (element.tagName === 'LABEL') {
+                document.getElementById('propText').value = element.innerText;
+            } else if (element.tagName === 'INPUT' || element.tagName === 'BUTTON') {
+                document.getElementById('propText').value = element.value;
+            }
+			else
+			{
+				document.getElementById('propText').value = "";
+			}
+			txtyaziboyut.value = element.style.fontSize;
+			txtkods.value = (givecode(element.id) === undefined ? "" : givecode(element.id));
+			
+			window.event.returnValue = false;
+        }
+
+function dragElement(event, element)
+{
+	if (divtasarim.style.visibility === "hidden") { return; }
+    event = event || window.event;
+    var posX = event.clientX;
+    var posY = event.clientY;
+
+    // Elementin başlangıç pozisyonunu başlatın eğer başlatılmamışsa.
+    if (!element.style.left) {
+        element.style.left = "0px";
+    }
+    if (!element.style.top) {
+        element.style.top = "0px";
+    }
+
+    // Mouse hareketi ile sürükleme işlemi.
+    document.onmousemove = function(event) {
+        event = event || window.event;  // Olay nesnesini güncelleyin.
+        element.style.left = (event.clientX - posX + parseInt(element.style.left)) + 'px';
+        element.style.top = (event.clientY - posY + parseInt(element.style.top)) + 'px';
+        posX = event.clientX;
+        posY = event.clientY;
+    };
+
+    // Mouse bırakıldığında sürüklemeyi durdurun.
+    document.onmouseup = function() {
+        document.onmousemove = null;
+        document.onmouseup = null;
+    };
+}
+
+
+ function applyEventCode() 
+ {
+    if (selectedElement) 
+	{
+		var code = document.getElementById('txtkods').value;
+		if (code.length > 0)
+		{
+			for (var x = 0; x<ids.length; x++)
+			{
+				if (ids[x] === selectedElement.id)
+				{
+					kods[x] = code;
+					break;
+				}
+			}
+		}
+    }
+}
+
+	
+		function option_ekle()
+		{
+			var opt = undefined;
+			if (selectedElement)
+			{
+				if (selectedElement.tagName.toLowerCase() !== "select")
+				{
+					alert("This is not select object!");
+					return;
+				}
+				opt = document.createElement("option");
+				opt.value = txtopt.value;
+				opt.text = txtopt.value;
+				
+				selectedElement.add(opt);
+			}
+		}
+		
+		function option_sil()
+		{
+			if (selectedElement)
+			{
+				for (var x = 0; x<selectedElement.options.length; x++)
+				{
+					if (selectedElement.options[x].value === txtopt.value)
+					{
+						selectedElement.remove(x);
+						return;
+					}
+				}
+			}
+		}
+		
+function updateProperties() 
+{
+            if (selectedElement) 
+			{
+			  try
+			  {
+				for (x = 0; x<ids.length; x++)
+				{
+					if (ids[x] === selectedElement.id) { ids[x] = txtid.value; break; }
+				}
+				
+				selectedElement.id = document.getElementById('txtid').value;
+                selectedElement.style.left = document.getElementById('propLeft').value;
+                selectedElement.style.top = document.getElementById('propTop').value;
+                selectedElement.style.width = document.getElementById('propWidth').value;
+                selectedElement.style.height = document.getElementById('propHeight').value;
+				
+				if (selectedElement.tagName.toLowerCase() === 'textarea')
+				{
+					selectedElement.rows = 6;
+					selectedElement.cols = 100;
+					selectedElement.style.width = "300px";
+					selectedElement.style.height = "150px";
+				}
+				else if (selectedElement.tagName === 'LABEL')
+				{
+                    selectedElement.innerText = document.getElementById('propText').value;
+                } 
+				else if (selectedElement.tagName === 'INPUT' || selectedElement.tagName === 'BUTTON') 
+				{
+                    selectedElement.value = document.getElementById('propText').value;
+                }
+					
+				 if (txtyaziboyut.value !== '') { selectedElement.style.fontSize = txtyaziboyut.value; }	
+				 if (txtrenk.value !== '') { selectedElement.style.color = txtrenk.value; }
+				 if (txtarkaplan.value !== '') { selectedElement.style.backgroundColor = txtarkaplan.value; }
+				 if (txtcss.value !== '') { selectedElement.className = txtcss.value; }
+				 
+				 if (selectedElement.tagName.toLowerCase() === "table")
+				 {
+					var tbody = selectedElement.getElementsByTagName("tbody")[0];
+					while (tbody.rows.length > 0) { tbody.deleteRow(0); }
+    
+					var satirSayisi = parseInt(txtsatir.value) || 0;
+					var sutunSayisi = parseInt(txtsutun.value) || 0;
+
+					for (var i = 0; i < satirSayisi; i++) 
+					{
+						var tr = document.createElement("tr");
+						tr.id = selectedElement.id + "tr" + i.toString();
+						for (var j = 0; j < sutunSayisi; j++) 
+						{
+							var td = document.createElement("td");
+							td.innerText = "SÜTUN " + (j + 1).toString();
+							tr.appendChild(td);
+						}
+						tbody.appendChild(tr);
+					}
+					
+				for (var x = 0, ix = 0; x < tbody.rows.length; x++) 
+				{ 
+					for (var y = 0; y < tbody.rows[x].cells.length; y++) 
+					{ 
+						tbody.rows[x].cells[y].id = selectedElement.id + ix.toString();
+						tbody.rows[x].cells[y].ondblclick = function () 
+						{
+							if (this.getElementsByTagName("*").length === 0)
+							{
+								secilihucre = this.id;
+								divelemans.style.display = "block";
+							}
+							else
+							{
+								selectedElement = this.getElementsByTagName("*")[0];
+								selectElement(selectedElement);
+							}
+						};
+						ix++;
+					}
+				}
+				}
+
+			  }
+			  catch(err)
+			  {
+			  }
+            }
+}		
+	
+	function Satir_Sutun(tblId, satirSayisi, sutunSayisi) { var tbody = document.getElementById(tblId).getElementsByTagName("tbody")[0]; while (tbody.rows.length > 0) { tbody.deleteRow(0); } for (var i = 0; i < parseInt(satirSayisi); i++) { var tr = document.createElement("tr"); tr.id = tbody.id + "tr" + i.toString(); for (var j = 0; j < parseInt(sutunSayisi); j++) { var td = document.createElement("td"); td.innerText = "SÜTUN " + (j + 1).toString(); tr.appendChild(td); } tbody.appendChild(tr); } for (var x = 0, ix = 0; x < tbody.rows.length; x++) { for (var y = 0; y < tbody.rows[x].cells.length; y++)  { tbody.rows[x].cells[y].id = tbody.id + ix.toString(); tbody.rows[x].cells[y].ondblclick = function () { if (this.getElementsByTagName("*").length === 0) { secilihucre = this.id;divelemans.style.display = "block"; } else { tbody = this.getElementsByTagName("*")[0]; selectElement(tbody); } }; ix++; } } }
+
+function tblelemanekle() 
+{
+    var eleman = document.getElementById(secilihucre);
+    var eleman2;
+    eleman.innerText = "";
+
+    var tagType = selelemant.value;
+    var designArea = document.getElementById("design-area");
+    
+    if (tagType === "label") {
+        addElement(tagType, tagType, "", eleman.id);
+        eleman2 = designArea.getElementsByTagName(tagType)[designArea.getElementsByTagName(tagType).length - 1];
+        eleman2.innerText = txtelemandeger.value;
+    } else if (["button", "text", "radio", "checkbox", "password"].includes(tagType)) {
+        addElement(tagType, "input", "", eleman.id);
+        eleman2 = designArea.getElementsByTagName("input")[designArea.getElementsByTagName("input").length - 1];
+        eleman2.value = txtelemandeger.value;
+    } else if (tagType === "img") {
+        addElement(tagType, tagType, "", eleman.id);
+        eleman2 = designArea.getElementsByTagName(tagType)[designArea.getElementsByTagName(tagType).length - 1];
+        eleman2.src = txtelemandeger.value;
+    } else if (tagType === "select" || tagType === "textarea") {
+        addElement(tagType, tagType, "", eleman.id);
+        eleman2 = designArea.getElementsByTagName(tagType)[designArea.getElementsByTagName(tagType).length - 1];
+        eleman2.value = txtelemandeger.value;
+
+        if (tagType === "textarea") {
+            eleman2.rows = 6;
+            eleman2.cols = 100;
+        }
+    } else if (tagType === "a") {
+        addElement(tagType, tagType, "", eleman.id);
+        eleman2 = designArea.getElementsByTagName(tagType)[designArea.getElementsByTagName(tagType).length - 1];
+        eleman2.innerText = txtelemandeger.value;
+        eleman2.href = "#";
+    }
+
+    // Ortak stiller
+    if (eleman2) {
+        eleman2.style.margin = "0px";
+        eleman2.style.position = "static";
+        eleman2.style.left = "0px";
+        eleman2.style.top = "0px";
+    }
+
+    divelemans.style.display = "none";
+}
+
+		
+		function givecode(id)
+		{
+			for (var x = 0; x<ids.length; x++)
+			{
+				if (id === ids[x]) { return kods[x]; }
+			}
+		}
+		
+		function srcata(src)
+		{ 
+			if (selectedElement)
+			{
+				if (selectedElement.tagName !== "img") { alert("This is not picturebox!"); return; }
+				selectedElement.src = src;
+			}
+		}
+		
+		function getelemid()
+		{
+			return selectedElement.id;
+		}
+		
+		function getid(id)
+		{
+			for (var x = 0; x<ids.length; x++) { if (id === ids[x]) { return x; } }
+		}
+		
+		function kontrolsil()
+		{
+			if (selectedElement)
+			{
+				if (window.confirm("Delete this control?") === true)
+				{
+					var id = 0;
+					id = getid(selectedElement.id);
+					if (ids.length < id && kods.length < id)
+					{
+						ids.remove(id);
+						kods.remove(id);
+					}
+					document.getElementById("design-area").removeChild(selectedElement);
+				}
+			}
+		}
+		
+    </script>
+	
+	<script type="text/vbscript">
+	Dim conn, rs, sql, selectedId, fso, objShell, dbPath, cat, lsn, cmd, txt, sutun, satir, vbs, i, Sablon, element, tip, dom, dr, recs
+	Dim kods
+	Sub basecode()
+	kods = "<!DOCTYPE html><html lang='tr'><head><meta charset='UTF-8'><title>HTA Form Designer</title>" & _
+       "<HTA:APPLICATION ID='program' APPLICATIONNAME='program' BORDER='thin' CAPTION='yes' SHOWINTASKBAR='yes' SINGLEINSTANCE='yes' SYSMENU='yes' WINDOWSTATE='maximize' resizable='yes' />" & _
+       "<style type='text/css'>" & _
+       "body { font-family: 'MS Reference Sans Serif'; background-color: #f4f4f4; margin: 0; padding: 0; color: #333; display: flex; height: 100vh; overflow-y:auto; }" & _
+       ".panel { background-color: white; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); width: 230px; }" & _
+       "#design-area { position: absolute; left: 20px; top: 20px; width: 85%; height: 755px; background-color: white; border: 1px solid #ddd; border-radius: 4px; margin-left: 20px; overflow-y:auto; padding: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); display: flex; flex-direction:column; justify-content: center; align-items: center; }" & _
+       ".panel-header { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #333; }" & _
+       ".panel-body { padding: 10px; display: flex; flex-direction: column; }" & _
+       ".panel-body button { margin-bottom: 10px; }" & _
+       ".button { border: none; padding: 8px 16px; text-align: center; text-decoration: none; font-size: 14px; font-family:'MS Reference Sans Serif'; font-weight:bold; width:200px; cursor: pointer; border-radius: 4px; transition: background-color 0.3s; margin-top: 10px; }" & _
+       ".button.default { background-color: #4CAF50; color: white; }" & _
+       ".button.approval { background-color: blue; color:white; }" & _
+       ".button.cancel { background-color: maroon; color: white; }" & _
+       ".button.cancel:hover, .button.default:hover, .button.approval:hover { background-color: whitesmoke; color: black; border-color:black; border:outset; }" & _
+       "input[type='text'], textarea,select {background-color:ivory;	border-color:gray; width: calc(100% - 24px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; }" & _
+       "input[type='checkbox'], input[type='radio'] { margin-right: 10px; }" & _
+       "table { background-color: azure; margin-bottom: 20px; border: 1px solid #ddd; }" & _
+       "th, td { padding: 8px; text-align: center; border-bottom: 1px solid #ddd; }" & _
+       "table tr:nth-child(even) { background-color: #f9f9f9; }" & _
+       "table tr:hover { background-color: #f1f1f1; } th { background-color: #4CAF50; color: white; }" & _
+       "</style>"& vbCrLf & _
+	   "<script type=" & chr(34) & "text/javascript" & chr(34) & ">" & _
+	   "function Satir_Sutun(tblId, satirSayisi, sutunSayisi) { var tbody = document.getElementById(tblId).getElementsByTagName('tbody')[0]; while (tbody.rows.length > 0) { tbody.deleteRow(0); } for (var i = 0; i < parseInt(satirSayisi); i++) { var tr = document.createElement('tr'); tr.id = tbody.id + 'tr' + i.toString(); for (var j = 0; j < parseInt(sutunSayisi); j++) { var td = document.createElement('td'); td.innerText = 'SÜTUN ' + (j + 1).toString(); tr.appendChild(td); } tbody.appendChild(tr); } for (var x = 0, ix = 0; x < tbody.rows.length; x++) { for (var y = 0; y < tbody.rows[x].cells.length; y++)  { tbody.rows[x].cells[y].id = tbody.id + ix.toString(); tbody.rows[x].cells[y].ondblclick = function () { if (this.getElementsByTagName('*').length === 0) { secilihucre = this.id;divelemans.style.display = 'block'; } else { tbody = this.getElementsByTagName('*')[0]; selectElement(tbody); } }; ix++; } } }" & vbCrLf & _
+	   "</@script>" & vbCrLf & _
+	   "<script type=""text/vbscript"">" & vbCrLf & _
+	   "Sub Kontrol_Sil(id) : document.getElementById("& Chr(34) &"design-area" & Chr(34) & ").removeChild(document.getElementById(id)) : End Sub" & vbCrLf & _
+	   "Dim conn, constr, cmd, recs, tr, td, tbl" & vbCrLf & _
+	   Replace("Sub Olustur(dbPath) : if isEmpty(dbPath) Then : Exit Sub : End if : Set objShell = CreateObject('WScript.Shell') : Set fso = CreateObject('Scripting.FileSystemObject') : Set cat = CreateObject('ADOX.Catalog'): if fso.FileExists(dbPath) = false Then : cat.Create 'Provider=Microsoft.Jet.OLEDB.4.0;Data Source=' & dbPath : Else : Call Baglan(dbPath) : End if : End Sub", "'", Chr(34)) & vbCrLf & _
+	   Replace("Sub Baglan(str) : if isEmpty(constr) Then : constr = str : End if : Set conn = CreateObject('ADODB.Connection') : if conn.state <> 1 Then : conn.Open 'Provider=Microsoft.Jet.OLEDB.4.0;Data Source=' & constr : End if : if conn.state <> 1 Then : MsgBox 'Bağlantı açılamadı!', vbCritical, 'HATA!' : End if : End Sub", "'", Chr(34)) & vbCrLf & _
+	   Replace("Sub Baglansql(str) : if isEmpty(constr) Then : constr = str : End if : Set conn = CreateObject('ADODB.Connection') : if conn.state <> 1 Then : conn.Open constr : End if : if conn.state <> 1 Then : MsgBox 'Bağlantı açılamadı!', vbCritical, 'HATA!' : End if : End Sub", "'", Chr(34)) & vbCrLf & _
+	   "Sub Basliklar(tblId) : Dim tbl : Set tbl = document.getElementById(tblId) :	if tbl.rows.length > 0 Then : window.eval(" & chr(34) & "javascript:Satir_Sutun('"& chr(34) & "& tblId & "& chr(34) &"', 1, "& chr(34) &" & recs.Fields.Count & "& chr(34) &");"& chr(34) &") : For x = 0 to recs.Fields.Count  - 1 : tbl.rows(0).cells(x).innerText = UCASE(recs.Fields(x).name)  : Next : End if : End Sub" & vbCrLf & _
+	   Replace("Sub kayitekle(tblId, kyt) : Dim tbl, rowIndex, cellIndex  : Set tbl = document.getElementById(tblId) : rowIndex = tbl.rows.length - 1 : If rowIndex >= 0 And Not IsEmpty(kyt) Then : For cellIndex = 0 To UBound(kyt) - 1 :  If cellIndex < tbl.rows(rowIndex).cells.length Then : tbl.rows(rowIndex).cells(cellIndex).innerHTML = '<label>' & kyt(cellIndex) & '</label>' : Else : Dim newCell : Set newCell = tbl.rows(rowIndex).insertCell(cellIndex) : newCell.innerHTML = '<label>' & kyt(cellIndex) & '</label>' : End If : Next : Else : MsgBox 'Satır bulunamadı veya kyt dizisi boş' : End If : End Sub", "'", Chr(34)) & vbCrLf & _
+	   "Sub Bekle(seconds) : Dim startTime : startTime = Timer :  Do While Timer < startTime + seconds  : Loop : End Sub" & vbCrLf & _
+	   "Sub Satirekle(tableID) : Dim table, newRow, cell, colCount, i : Set table = document.getElementById(tableID).getElementsByTagName("& chr(34) & "tbody"& chr(34) &")(0) : If table.rows.length > 0 Then colCount = table.rows(0).cells.length Else colCount = 1  End If : Set newRow = document.createElement("&chr(34) & "tr"&chr(34) & ") : For i = 0 To colCount - 1 : Set cell = document.createElement("&chr(34)&"td" & chr(34) & ") : cell.innerHTML = " & chr(34) & "nbsp;" & chr(34) & " : newRow.appendChild(cell): table.appendChild(newRow) : Next : End Sub" & vbCrLf & _
+	   "Sub Yukle(tbl) : dim kyt() : Set tbl = document.getElementById(tbl) :	if isEmpty(recs) = false Then :	if recs.Fields.Count > 0 Then Basliklar tbl.id End if : While tbl.rows.length > 1 : tbl.deleteRow(1): Wend : if recs.EOF = false Then :  recs.MoveFirst : While recs.EOF = false : Redim kyt(recs.Fields.Count) : for x = 0 to recs.Fields.Count - 1 : kyt(x) = recs(x).value :	Next : recs.MoveNext : Satirekle(tbl.id) : kayitekle tbl.id, kyt :  Wend :	End If : recs.close() :	End if : End Sub" & vbCrLf & _
+	   "Sub Kontrol_Ekle(tagName, ad, value, tip)" & vbCrLf & _
+      "Dim newElement, parentDiv" & vbCrLf & _
+      "Set parentDiv = Document.getElementById(""design-area"")" & vbCrLf & _
+      "Set newElement = Document.createElement(tagName)" & vbCrLf & _
+      "newElement.id = ad" & vbCrLf & _
+      "If tagName = ""input"" Then" & vbCrLf & _
+      "newElement.value = value" & vbCrLf & _
+      "If IsEmpty(tip) Then" & vbCrLf & _
+      "newElement.setAttribute ""type"", ""text""" & vbCrLf & _
+      "Else" & vbCrLf & _
+      "newElement.setAttribute ""type"", tip" & vbCrLf & _
+      "End If" & vbCrLf & _
+      "If tip = ""button"" Then" & vbCrLf & _
+      "newElement.className = ""button default""" & vbCrLf & _
+      "End If" & vbCrLf & _
+      "ElseIf tagName = ""img"" Then" & vbCrLf & _
+      "newElement.src = value" & vbCrLf & _
+      "Else" & vbCrLf & _
+      "newElement.innerText = value" & vbCrLf & _
+      "End If" & vbCrLf & _
+      "parentDiv.appendChild(newElement)" & vbCrLf & _
+      "End Sub" & vbCrLf & _
+	  "Sub Calistir(sql) : Dim i : i = -1 : Call Baglan(??) : conn.Execute sql, i : if i = -1 Then MsgBox "& Chr(34) &"işlem başarısız!" & Chr(34) & ", vbCritical, "& Chr(34) &"HATA!" & Chr(34) & " Else MsgBox "& Chr(34) &"işlem başarılı!" & chr(34) & ", vbInformation, " & Chr(34) & "Bilgi!" & Chr(34) & " End if : End Sub" & vbCrLf & _
+	   Replace("Sub Liste(sql, tblId) : Call Baglan(??) : If conn.State <> 1 Then : MsgBox 'Bağlantı açık değil', vbCritical, 'HATA!' : Exit Sub : End If : Set recs = CreateObject('ADODB.Recordset') : recs.Open sql, conn : CALL Yukle (tblId) : Exit Sub : End Sub", "'", Chr(34)) & vbCrLf & _
+       "'kodlar"& vbCrLf &"</@script></head><body><div id=""design-area"">@html</div>"& vbCrLf &"<script type=""text/vbscript"">"& vbCrLf &"'events"& vbCrLf &"</@script>"& vbCrLf &"</body></html>"
+
+		kods = Replace(kods, "</@", "</")
+	End Sub
+	
+Function NormalizeHTML(htmlContent)
+    Dim regex, matches, match, fixedHtml
+    Set regex = New RegExp
+    regex.Pattern = "(<[^>]+?\s)(\w+=)([^""]+?)(\s|>)"
+    regex.Global = True
+    
+    fixedHtml = htmlContent
+    
+    Set matches = regex.Execute(htmlContent)
+    For Each match In matches
+        fixedHtml = Replace(fixedHtml, match.Value, match.SubMatches(0) & match.SubMatches(1) & Chr(34) & match.SubMatches(2) & Chr(34) & match.SubMatches(3))
+    Next
+    
+    NormalizeHTML = fixedHtml
+End Function
+
+Sub Kontrol_Ekle(tagName, ad, value, tip) : Dim newElement, parentDiv : Set parentDiv = Document.getElementById("design-area") : Set newElement = Document.createElement(tagName) : newElement.id = ad
+    if tagName = "input" Then
+        newElement.value = value :If IsEmpty(tip)  Then : newElement.setAttribute "type", "text" : Else : newElement.setAttribute "type", tip : End If : if tip = "button" Then : newElement.className = "button default" : End if
+	Elseif tagName = "img" Then
+		newElement.src = value
+    Else
+        newElement.innerText = value
+    End if
+	
+    parentDiv.appendChild(newElement)
+End Sub
+
+
+Sub Satirekle(tableID) : Dim table, newRow, cell, colCount, i : Set table = document.getElementById(tableID).getElementsByTagName("tbody")(0) : If table.rows.length > 0 Then colCount = table.rows(0).cells.length Else colCount = 1  End If : Set newRow = document.createElement("tr") : For i = 0 To colCount - 1 : Set cell = document.createElement("td") : cell.innerHTML = "&nbsp;" : newRow.appendChild(cell): table.appendChild(newRow) : Next : End Sub
+
+Sub Basliklar(tblId) : Dim tbl : Set tbl = document.getElementById(tblId) :	if tbl.rows.length > 0 Then : window.eval("javascript:Satir_Sutun('"& tblId &"', 1, "& recs.Fields.Count &");") : For x = 0 to recs.Fields.Count  - 1 : tbl.rows(0).cells(x).innerText = UCASE(recs.Fields(x).name)  : Next : End if : End Sub
+
+Sub kayitekle(tblId, kyt) : Dim tbl, rowIndex, cellIndex  : Set tbl = document.getElementById(tblId) : rowIndex = tbl.rows.length - 1 : If rowIndex >= 0 And Not IsEmpty(kyt) Then : For cellIndex = 0 To UBound(kyt) - 1 :  If cellIndex < tbl.rows(rowIndex).cells.length Then : tbl.rows(rowIndex).cells(cellIndex).innerHTML = "<label>" & kyt(cellIndex) & "</label>" : Else : Dim newCell : Set newCell = tbl.rows(rowIndex).insertCell(cellIndex) : newCell.innerHTML = "<label>" & kyt(cellIndex) & "</label>" : End If : Next : Else : MsgBox "Satır bulunamadı veya kyt dizisi boş" : End If : End Sub
+
+
+Dim constr
+Sub Baglan(str) : if isEmpty(constr) Then : constr = str : End if : Set conn = CreateObject("ADODB.Connection") : if conn.state <> 1 Then : conn.Open "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & constr : End if : if conn.state <> 1 Then : MsgBox "Bağlantı açılamadı!", vbCritical, "HATA!" : End if : End Sub
+
+Sub Baglansql(str) : if isEmpty(constr) Then : constr = str : End if : Set conn = CreateObject("ADODB.Connection") : if conn.state <> 1 Then : conn.Open constr : End if : if conn.state <> 1 Then : MsgBox "Bağlantı açılamadı!", vbCritical, "HATA!" : End if : End Sub
+
+Sub Liste(sql, tblId) : Call Baglan("") : If conn.State <> 1 Then : MsgBox "Bağlantı açık değil", vbCritical, "HATA!" : Exit Sub : End If : Set recs = CreateObject("ADODB.Recordset") : recs.Open sql, conn : CALL Yukle (tblId) : Exit Sub : End Sub
+
+ Sub Bekle(seconds) : Dim startTime : startTime = Timer :  Do While Timer < startTime + seconds  : Loop : End Sub
+
+Sub Yukle(tbl) : dim kyt() : Set tbl = document.getElementById(tbl) :	if isEmpty(recs) = false Then :	if recs.Fields.Count > 0 Then Basliklar tbl.id End if : While tbl.rows.length > 1 : tbl.deleteRow(1): Wend : if recs.EOF = false Then :  recs.MoveFirst : While recs.EOF = false : Redim kyt(recs.Fields.Count) : for x = 0 to recs.Fields.Count - 1 : kyt(x) = recs(x).value :	Next : recs.MoveNext : Satirekle(tbl.id) : kayitekle tbl.id, kyt :  Wend :	End If : recs.close() :	End if : End Sub
+
+Sub Calistir(sql) : Dim i : i = -1 : Call Baglan("") : conn.Execute sql, i : if i = -1 Then MsgBox "işlem başarısız!", vbCritical, "HATA!" Else MsgBox "işlem başarılı!", vbInformation, "Bilgi!" End if : End Sub
+
+	 Function ResmiBase64eDonustur(dosyaYolu)
+        Dim objStream, arrByte, strBase64, id
+
+        Set objStream = CreateObject("ADODB.Stream")
+        objStream.Type = 1 ' Binary data
+        objStream.Open
+        objStream.LoadFromFile dosyaYolu
+
+        ' Dosya içeriğini byte array olarak al
+        arrByte = objStream.Read()
+
+        strBase64 = "data:image/png;base64," & EncodeBase64(arrByte)
+		id = window.eval("getelemid();")
+		document.getElementById(id).src = strBase64
+		txtsrc.value = strBase64
+        objStream.Close
+        Set objStream = Nothing
+
+        ResmiBase64eDonustur = strBase64
+    End Function
+
+    Function EncodeBase64(binaryData)
+        Dim objXML, objNode
+
+        Set objXML = CreateObject("MSXml2.DOMDocument")
+        Set objNode = objXML.createElement("Base64Data")
+        objNode.dataType = "bin.base64"
+        objNode.nodeTypedValue = binaryData
+        EncodeBase64 = objNode.text
+
+        Set objNode = Nothing
+        Set objXML = Nothing
+    End Function
+	
+	Sub Sil()
+		if Sablon = "" Then Exit Sub
+		Call ConnectDatabase()
+		dr = MsgBox("Bu şablon silinsin mi?", vbyesno + vbQuestion, "SİL?")
+		if dr = vbno Then Exit Sub
+		sql = "DELETE FROM Kontroller WHERE Sablon = '" & Sablon & "'"
+		conn.Execute sql, i
+		if i > 0 Then MsgBox "Başarıyla silindi!", vbOkOnly + vbInformation, "Bilgi!" Else MsgBox "Silinemedi!", vbCritical, "HATA!"
+	End Sub
+	
+	Sub Listele()
+		Call ConnectDatabase()
+		Sablon = inputbox("Şablon adı", "Şablon adı")
+		if Sablon = "" Then Exit Sub
+		sql = "SELECT * FROM Kontroller WHERE Sablon = '" & Sablon & "'"
+		Set rs = conn.Execute(sql)
+		if rs.EOF = true Then Exit Sub
+		If document.getElementById("design-area").childNodes.length > 0 Then
+		Set element = document.getElementById("design-area")    
+    
+		While element.childNodes.length > 0
+			element.removeChild(element.childNodes(0))
+		Wend
+		End If
+
+		rs.MoveFirst
+		While rs.EOF = false
+			window.eval("addElement('"& Lcase(rs("tip").value) &"', '"& Lcase(rs("tagName").value) &"', '"& rs("kod").value &"');")
+			document.getElementById(rs("kod").value).className = rs("css").value
+			if rs("tagName").value = "INPUT" Then document.getElementById(rs("kod").value).value = rs("METiN").value
+			if rs("tagName").value = "LABEL" Then document.getElementById(rs("kod").value).innerText = rs("METiN").value
+			if rs("x").value <> "" Then	document.getElementById(rs("kod").value).style.left = rs("x").value
+			if rs("y").value <> "" Then	document.getElementById(rs("kod").value).style.top = rs("y").value
+			if rs("yukseklik").value <> "" Then document.getElementById(rs("kod").value).style.height = rs("yukseklik").value
+			if rs("genislik").value  <> "" Then document.getElementById(rs("kod").value).style.width  = rs("genislik").value
+			if rs("yazirenk").value  <> "" Then document.getElementById(rs("kod").value).style.color  = rs("yazirenk").value
+			if rs("Arkaplan").value  <> "" Then document.getElementById(rs("kod").value).style.backgroundColor  = rs("Arkaplan").value
+			if rs("yaziboyutu").value  <> "" Then document.getElementById(rs("kod").value).style.fontSize  = rs("yaziboyutu").value
+			If rs("vbs").value <> "" Then
+				vbs = rs("vbs").value				
+				txtkods.value = vbs
+				
+				window.eval("javascript:kods[getid('"& rs("kod").value &"')] = txtkods.value;")
+				'txtkods.value = ""
+			End If
+			rs.MoveNext
+		Wend
+		
+		rs.Close()
+		conn.Close()
+	End Sub
+	
+Sub Kaydet()
+	Dim fso, file, scr, ad
+	ad = inputbox("PROGRAM NAME", "PROGRAM NAME")
+	if ad = "" Then Exit Sub
+	Set objShell = CreateObject("WScript.Shell")
+	ad = objShell.SpecialFolders("Desktop") & "\" & ad & ".hta"
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set file = fso.CreateTextFile(ad, True)
+	scr = ""
+	For x = 0 to document.getElementById("design-area").childNodes.length - 1
+		scr = scr & " Sub " & document.getElementById("design-area").childNodes(x).id & "_Click()" & vbCrLf & window.eval("givecode('" & document.getElementById("design-area").childNodes(x).id & "');") & vbCrLf & " End Sub" & vbCrLf
+	Next
+	
+	Call basecode()
+	
+	kods = Replace(kods, "@html", document.getElementById("design-area").innerHTML)
+	kods = Replace(kods, "</@", "</")
+	kods = Replace(kods, "'kodlar", scr)
+	kods = Replace(kods, "class=draggable", "")
+	kods = Replace(kods, "draggable", "")
+	kods = Replace(kods, "id=", "id=" & chr(34))
+	kods = Replace(kods, " style=" & Chr(34),  Chr(34) & " style=" & chr(34) & "position:absolute; ")
+	kods = Replace(kods, "type=button", "type="& chr(34) &"button" & chr(34))
+	kods = Replace(kods, "type=text", "type="& chr(34) &"text" & chr(34))
+	kods = Replace(kods, "type=radio", "type="& chr(34) &"radio" & chr(34))
+	kods = Replace(kods, "type=checkbox", "type="& chr(34) &"checkbox" & chr(34))
+	kods = Replace(kods, "type=password", "type="& chr(34) &"password" & chr(34))
+	kods = Replace(kods, "Ö", "&Ouml")
+	kods = Replace(kods, "ö", "&ouml")
+	kods = Replace(kods, "ü", "&uuml")
+	kods = Replace(kods, "Ü", "&Uuml")
+	kods = Replace(kods, "ı", "&#305;")
+	kods = Replace(kods, "İ", "&#304;")
+	kods = Replace(kods, "ç", "&ccedil;")
+	kods = Replace(kods, "Ç", "&Ccedil;")
+	kods = Replace(kods, " class", Chr(34) & " class")
+	kods = Replace(kods, "CURSOR: move;", "CURSOR: pointer;")
+	kods = Replace(kods, " " & Chr(34) & " style=", Chr(34) & " style=" & chr(34))
+	kods = Replace(kods, Chr(34) & Chr(34), Chr(34))
+	kods = Replace(kods, "??", Chr(34) & Chr(34))
+	kods = Replace(kods, "Baglan(" & chr(34) & ")", "Baglan(" & chr(34) & Chr(34) & ")")
+	scr = ""
+	
+	For x = 0 to document.getElementById("design-area").childNodes.length - 1
+		scr = scr & document.getElementById("design-area").childNodes(x).id & ".onclick = GetRef(" & chr(34) & document.getElementById("design-area").childNodes(x).id & "_Click" & Chr(34) & ")" & vbCrLf
+	Next
+	
+	kods = Replace(kods, "'events", scr)
+	
+    file.WriteLine kods
+    file.Close
+	
+	MsgBox "Saved to Desktop!", vbInformation, "Info!"
+End Sub
+	
+
+Sub Kaydetvt()
+    Set cmd = CreateObject("ADODB.Command")
+    Set cmd.ActiveConnection = conn
+    Dim txt, sutun, satir, vbs, i
+	Sablon = inputbox("Table Name", "Table Name")
+	if Sablon = "" Then Exit Sub
+	cmd.CommandText = "DELETE FROM Kontroller WHERE Sablon = '" & Sablon & "'"
+	cmd.Execute
+    For i = 0 To document.getElementById("design-area").childNodes.length - 1
+        Set element = document.getElementById("design-area").childNodes(i)
+        Set cmd = CreateObject("ADODB.Command")
+		Set cmd.ActiveConnection = conn       
+        
+        If element.tagName = "INPUT" Then 
+            txt = element.value 
+			tip = element.type
+        Else 
+            txt = element.innerText
+			tip = element.tagName
+        End If
+        
+        ' Tablo için satır ve sütun sayısı
+        If element.tagName = "TABLE" Then 
+            sutun = element.rows(0).cells.length
+            satir = element.rows.length
+        Else
+            sutun = Null
+            satir = Null
+        End If
+        
+        ' VBS kodunu alma (Javascript fonksiyon çağrısı)
+        vbs = window.eval("givecode('" & element.id & "')")
+        
+        ' Parametreli sorgu ile SQL komutu
+        cmd.CommandText = "INSERT INTO Kontroller(Sablon, src, tagName, tip, kod, Metin, yukseklik, genislik, x, y, yazirenk, Arkaplan, css, sutun, satir, yaziboyutu, vbs) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, Sablon)
+		if Lcase(element.tagName) = "img" Then 
+			cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.src) 
+		Else 
+			cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, "")
+		End if
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.tagName)
+		cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, tip)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.id)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, txt)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.height)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.width)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.left)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.top)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.color)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.backgroundColor)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.className)
+        cmd.Parameters.Append cmd.CreateParameter(, 3, 1, , sutun)  ' sutun ve satir sayısı Null olabilir
+        cmd.Parameters.Append cmd.CreateParameter(, 3, 1, , satir)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, element.style.fontSize)
+        cmd.Parameters.Append cmd.CreateParameter(, 200, 1, 255, vbs)
+        
+        cmd.Execute
+    Next
+    
+    MsgBox "The operation was successful!!", vbInformation, "Info"
+End Sub
+
+		
+	 Sub CreateDatabase()
+			Set objShell = CreateObject("WScript.Shell")
+			dbPath = objShell.SpecialFolders("MyDocuments") & "\Veriler.mdb"
+			Set fso = CreateObject("Scripting.FileSystemObject")
+            Set cat = CreateObject("ADOX.Catalog")            
+            On Error Resume Next
+            if fso.FileExists(dbPath) = True Then 
+				Call ConnectDatabase()
+				Exit Sub
+			End if
+			cat.Create "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & dbPath
+            If Err.Number = 0 Then
+				Call ConnectDatabase()
+				sql = "CREATE TABLE Kontroller(id int identity primary key, Sablon varchar(200), src text, tagName varchar(10), tip varchar(20), kod varchar(50), Metin text, yukseklik varchar(6), genislik varchar(6), x varchar(10), y varchar(10), yazirenk varchar(10), Arkaplan varchar(10), css varchar(255), sutun varchar(10), satir varchar(10), yaziboyutu varchar(10), vbs text)"
+				conn.Execute sql
+				
+				sql = "CREATE TABLE Lisans(Tarih DateTime)"
+				conn.Execute sql
+				
+				sql = "insert into Lisans Values (NOW())"
+				conn.Execute sql
+            Else
+                MsgBox "Database is not created!: " & Err.Description
+            End If
+            On Error GoTo 0
+
+            Set cat = Nothing
+        End Sub
+    ' Veritabanına Bağlan
+    Sub ConnectDatabase()
+        Set conn = CreateObject("ADODB.Connection")
+        if conn.state <> 1 Then conn.Open "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & dbPath
+		sql = "Select Datediff('d', Tarih, NOW()) As Gun From Lisans"
+		Set rs = conn.Execute(sql)
+		if rs.EOF = True Then MsgBox "Could not get license information!", vbCritical, "ERROR!" : window.close()
+		
+		if Cint(rs("Gun").value) >= 30 Then 
+			MsgBox "Your demo period has ended. To continue using the program, you need to call us and get a license!", vbOkOnly + vbExclamation, "TIME EXPIRED!" 
+			lsn = False 
+			diviletisim.style.display = "block"
+		Else 
+			lsn = True
+		End if	
+    End Sub
+	
+		Sub ExecuteVBS(id)
+			Dim kod
+			
+			if divtasarim.style.visibility = "visible" Then Exit Sub
+			kod = window.eval("givecode('" & id & "')")
+			Execute kod
+		End Sub
+		
+		Sub Opendesign()
+			divtasarim.style.visibility = "visible"
+			solbar.style.display = "block"
+			document.getElementById("design-area").style.left = "300px"
+			document.getElementById("design-area").style.top = "75px"
+			menu.style.display = "block"
+			For x = 0 To document.getElementById("design-area").childNodes.length - 1
+				document.getElementById("design-area").childNodes(x).style.borderStyle = "solid"
+			Next
+		End Sub
+		
+		Sub Closedesign()
+			divtasarim.style.visibility = "hidden"
+			solbar.style.display = "none"
+			document.getElementById("design-area").style.left = "10px"
+			document.getElementById("design-area").style.top = "10px"
+			menu.style.display = "none"
+			For x = 0 To document.getElementById("design-area").childNodes.length - 1
+				document.getElementById("design-area").childNodes(x).style.borderStyle = "none"
+			Next
+		End Sub
+		
+		Sub Generate()
+			Set fso = CreateObject("Scripting.FileSystemObject")
+            
+            sourceFilePath = oHTA.CommandLine
+
+            
+            sourceFilePath = Replace(sourceFilePath, Chr(34), "")
+            
+            
+            Set sourceFile = fso.OpenTextFile(sourceFilePath, 1)
+            content = sourceFile.ReadAll
+            sourceFile.Close
+            
+            
+            newContent = Replace(content, "eskiKelime", "yeniKelime")
+            
+            
+            destinationFilePath = "C:\YeniKlasor\replaceFile.hta"
+            
+            
+            If Not fso.FolderExists("C:\YeniKlasor") Then
+                fso.CreateFolder("C:\YeniKlasor")
+            End If
+            
+            
+            Set destinationFile = fso.CreateTextFile(destinationFilePath, True)
+            destinationFile.Write newContent
+            destinationFile.Close		
+		End Sub
+	</script>
+</head>
+<body onkeydown="vbscript:if window.event.keycode = 13 Then Call Opendesign()" onload="vbscript: CreateDatabase()">
+
+<div id="menu" style="width:95%; text-align:center;">
+	<table>
+		<tbody>
+			<tr>
+				<td><a href="#" class="button default" onclick="vbscript:Generate()">NEW</a></td>
+				<td><a href="#" class="button default" onclick="vbscript:Kaydet()">SAVE</a></td>
+				<td><a href="#" class="button cancel" onclick="vbscript:Sil()">DELETE</a></td>
+				<td><a href="#" class="button approval" onclick="vbscript: Listele()">OPEN</a></td>
+				<td><a href="#" class="button cancel" onclick="window.close()">CLOSE</a></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+<div id="divtasarim" class="tasarim" style="visibility:visible;">
+	<a style="color:white; font-weight:bold;" href="#" onclick="vbscript:Closedesign()">CLOSE THE DESIGN MODE</a>
+</div>
+
+<div id="solbar" style="max-height:720px; overflow-y: scroll; width:285px; position:absolute; left: 5px; top: 65px;">
+<div id="toolbox" class="panel">
+    <center><div class="panel-header"><h3 onclick="RenkSec()">TOOLS</h3></div></center>
+    <div class="panel-body">
+        <button onclick="addElement('label', 'label');" class="button default" style="text-align:left;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAXRJREFUOE+NkjFowkAUhp8k13Ysbk4dC06CoEMFwUEng0Vc4pJBksZF6Co4CK4FO9gmZHCSgkglneIgdKuC4CRkKzh0KIYMXexdoESwNeBdc+u99/H/Hy8CjNdsNosIoRhtBGP8EWEBVFWVe72eRpup1+sKE1AqleTRaKTJsnw3n8/t5XKpJRIJJZVKXeq6flsul9mATCZTxBjHEEIzjuPSk8lEy+fziud5M4xxGiHErnAY3U8zGAw0URSV8Xis7/+YFQ4BlUpFNgxDq9VqynA4/AOEMd3pdF4EQbjp9/sPkiSppmk+/iYIY9q27c94PJ5ttVqNdrvdXa1Wr9Pp9NmHRMKYXq/XZ5ZldQkhwPM8FAqFxmKxuN8BWKa32+2V67reZrPxeJ4/38cmhLiO47wBwHtA4hHTHAD4i6dHjokAgBsA0EyzrjUAoJkOBcjlctc00/8Bdj2TyWT1iOknvycAfNMgfoUTALiIRqNZmmkA+KIBfgAWLdzZW+/wrAAAAABJRU5ErkJggg==">&nbsp;&nbsp; 
+		LABEL
+		</button>
+		
+		<button onclick="addElement('img', 'img');" class="button default" style="text-align:left;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAdxJREFUOE+lkz9oU1EUxn/nveQlqe1gCxrooFiKkiEoomLBSosOyaQoLsU4dFZwFMHiJDgU/7RCwaWJAQd1UBITxa0IbRG0QiOtiFvBukg0sU3uO3KTlkpAKOZcznI433e+8+cKbZq0iad9gslsIWWMmfb9LS2CQsM3zdaxvhV3HAfHdS/JvXReL19MUNnItWmBjfRNea1wS2NzJjJ55M50Tq+kklTen2dHbYnfwX6K0acEfRABcaD8vcjK0ijRvnG6dl/A+HBiF6SzOUuQ19GRBJ0zMXA7wP9JZs8nPB8cB/z6GqulBKb2DTVVoodKaMBjqMfw5FkBuZvO68jZBKH5M3TWSqx7+3nY+xxPmwSrc32o69FRDlDpMmDW2Xn0M6e66xRyReR+Oq/nkkNMrYRxBVzbnwXTJPi1mKJemWXfa+HLacWNHCMUS5PoNsy8eYVMZF5qcniQF8uDBJww0njNDYgEwI1AMMzatQVCt+LoepW6+cFA7zizb8vI5KOCnhw4zuO5g7gSQezU/l6fnaSVYsM+qDH4WmX4wBSljwZ5kC3okcNxUA9pNNByW62npopiQOrMv/uAXL1++0Z/LH6zqXqbhynNFpcXF8YsogfY+59/4us2S/6bvm2CP3p3p8tZiXskAAAAAElFTkSuQmCC">&nbsp;&nbsp; 
+		IMAGE
+		</button>
+		
+        <button onclick="addElement('text', 'input');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAARtJREFUOE9jZKAQMFKon4FyA7i5uSP//fsnR45LmJiYHjFqaWkVb9mypYccA3x8fEoYXV1d8+fOnTsBlwGPHj1iOHPmDIq0iIgIg52dHUNycnIBY1BQUO7UqVMnYTPg7t27DIcOHQJLJSYmMqxcuZIhPDycYf78+WB+dnZ2HmNMTEzOxIkTJ2MzoLe3Fy7Mw8PDkJ6ezjBz5kyGL1++MBQXFzPk5+fnMqampmb19fVNxWbA5cuXGVasWAGWam1tZejo6GCoqKhgqK6uBvOLioqyGXNzczO7u7un4QqDs2fPMsybNw9FWk1NDWQ7Q2lpaRZjWVlZRnt7+3RyYqGysjKTsbq62peRkVGKHAP+////jPKUSI7NyHoG3gUAEPtdbspnvPAAAAAASUVORK5CYII=" />&nbsp;&nbsp;
+		TEXT BOX
+		</button>
+		
+		<button onclick="addElement('password', 'input');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAANBJREFUOE9jZKAQMFKon2EQGMDHxxf5+/dvOXK8wsrK+ohRX1+/aP369b3kGBAYGFjM6OHhkTd79uyJz549Y9i5cyeDu7s7g5SUFAM6H5sFqamp+YwhISG5U6dOndTd3Q1XU1payoDOx2ZAdnZ2HmNSUlJ2X1/flLKyMriarq4uBnQ+NgOKiopyGLOzszN7enqm3bp1iwGmUU1NjQGdj82AkpKSLMbi4uKMzs7O6eQEYnl5eSZjdXW1LyMjoxQ5Bvz////ZIEiJ5DgdWQ/FXgAAc/tO/ApGYL0AAAAASUVORK5CYII=" />&nbsp;&nbsp;
+		PASSWORD BOX
+		</button>
+		
+		<button onclick="addElement('select', 'select');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAWhJREFUOE9jZKAQMFKon4FyA5JaXgYzMTF1MzAwKpLmmv/3//37V8oYUf3wno+NoKKsBCtJ+h+/+M2w5cj7+4xeORf/lySoMPz/948kAxiZmBh6FtxhYLSKOfC/IceQ4e+fPyQZwMzCwtAw5TwDo47fpnvJodqK6gr8DP8ZGBj+/fvHwMTEhNcwUMjffPCRYe7qq/cZVd3XBP///7+bgYEBHIj91XYMha2HiHHNfUZGxlKUaFRyWft/Uq0tQ17zYYZ7e4KJimKwIg2vXQf+//9nD2L3VZkwFLWdAbuAkZHp4I1tbg74nAM2QD/gaLGyPF9PaqgUw3+G/wyMDIwMs1c/Y7j78FPJxQ3WvYQMAIUYt7rjzFJDE7faeH8+hoUbPzFcOLW76cbBtIkMDAx/sWBQnIPCHJyUWRgYGERBWNtxVrSYkm/Zq/vbOq7uS17EwMDwm4GB4RcWDIpzcMIhKqAIeYGYKMOpBgDztnoVbNtM+wAAAABJRU5ErkJggg==" />&nbsp;&nbsp;
+		COMBOBOX
+		</button>
+		
+		<button onclick="addElement('textarea', 'textarea');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAARtJREFUOE9jZKAQMFKon4FyA7i5uSP//fsnR45LmJiYHjFqaWkVb9mypYccA3x8fEoYXV1d8+fOnTsBlwGPHj1iOHPmDIq0iIgIg52dHUNycnIBY1BQUO7UqVMnYTPg7t27DIcOHQJLJSYmMqxcuZIhPDycYf78+WB+dnZ2HmNMTEzOxIkTJ2MzoLe3Fy7Mw8PDkJ6ezjBz5kyGL1++MBQXFzPk5+fnMqampmb19fVNxWbA5cuXGVasWAGWam1tZejo6GCoqKhgqK6uBvOLioqyGXNzczO7u7un4QqDs2fPMsybNw9FWk1NDWQ7Q2lpaRZjWVlZRnt7+3RyYqGysjKTsbq62peRkVGKHAP+////jPKUSI7NyHoG3gUAEPtdbspnvPAAAAAASUVORK5CYII=" />&nbsp;&nbsp;
+		TEXT AREA
+		</button>
+		
+        <button onclick="addElement('button', 'input');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAj1JREFUOE+lkl9I01EUxz/3t59DTUqThZqsUCOYWiQViqHLVhGZYWL0/1ES7MVpvViQlA/KXvIhe9UtscLMjCSL9pAYGvZPrfBPZdisZa5auXLbjW0KPQQi3pdzOfec7znc70ewxCOW2E9QYOfpqwO/vb5UiQzpzYXAa6BAylAqWCxAQaBVNYNdtUfSRKC5tCAjtTB7/aKWudn9hsvt/YMit9wq7ZajvHN6OHheS1+HQmaBn7aaGeI2LguMY9teH9eqPRRVRdBzQ+Htcw9rdeEYzTZETnmT7Ko7xrDjOyW1kbTWuCmuiqKl2k1CZjS/BqaJNMTg6J0mflMMo49duNwKqYnL2XXGisgtb5JtFw4z8snFlt2xjPd9Rp+5irFHTpLydMENtDp41ewkOUvH064vuH4qpOtXUHSuGWE0W6XtbDHDk18xFsWBCvjhRedHNuxJYOThBCk5q+nvdJBhiqf7joNvbg3p+miOX7yO2F5hlQ3mA7x2TLH/UCLdd9+Tnb8G+61xjIX64K9n5HioLXNScUnHs3vhtLZMYEhcSamlFZFXYZN1Zfm8/DBFVIQfVSMRImSdqiF49/rA5wdFwPQPFUVI0vSxVNZ3IEyVNmk5VUDP8CQnS1IgbN7wf+I8FwGjZ6HhyghZ6+Iw17cjTObG0R1bDUnGzcl4Zv+gKnKOmP9gIcHrF4SHabE/GeVB79BYAC6Dydx4W6hqUoC3hdgOLSOQXu/YfcuJffP1BiBiUSjCDDC00MAFNZcs8BdVTcoEbiGFAgAAAABJRU5ErkJggg==" />&nbsp;&nbsp;
+		BUTTON
+		</button>
+		
+        <button onclick="addElement('a', 'a');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAj1JREFUOE+lkl9I01EUxz/3t59DTUqThZqsUCOYWiQViqHLVhGZYWL0/1ES7MVpvViQlA/KXvIhe9UtscLMjCSL9pAYGvZPrfBPZdisZa5auXLbjW0KPQQi3pdzOfec7znc70ewxCOW2E9QYOfpqwO/vb5UiQzpzYXAa6BAylAqWCxAQaBVNYNdtUfSRKC5tCAjtTB7/aKWudn9hsvt/YMit9wq7ZajvHN6OHheS1+HQmaBn7aaGeI2LguMY9teH9eqPRRVRdBzQ+Htcw9rdeEYzTZETnmT7Ko7xrDjOyW1kbTWuCmuiqKl2k1CZjS/BqaJNMTg6J0mflMMo49duNwKqYnL2XXGisgtb5JtFw4z8snFlt2xjPd9Rp+5irFHTpLydMENtDp41ewkOUvH064vuH4qpOtXUHSuGWE0W6XtbDHDk18xFsWBCvjhRedHNuxJYOThBCk5q+nvdJBhiqf7joNvbg3p+miOX7yO2F5hlQ3mA7x2TLH/UCLdd9+Tnb8G+61xjIX64K9n5HioLXNScUnHs3vhtLZMYEhcSamlFZFXYZN1Zfm8/DBFVIQfVSMRImSdqiF49/rA5wdFwPQPFUVI0vSxVNZ3IEyVNmk5VUDP8CQnS1IgbN7wf+I8FwGjZ6HhyghZ6+Iw17cjTObG0R1bDUnGzcl4Zv+gKnKOmP9gIcHrF4SHabE/GeVB79BYAC6Dydx4W6hqUoC3hdgOLSOQXu/YfcuJffP1BiBiUSjCDDC00MAFNZcs8BdVTcoEbiGFAgAAAABJRU5ErkJggg==" />&nbsp;&nbsp;
+		LINK
+		</button>
+		
+        <button onclick="addElement('input_radio', 'input');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAsBJREFUOE99k11IU2EYx5/3nLY5lx+bn9tcK4umklmWlElYiJc1GSYhGXSR0FUfioF114VUSvQFUVd5o0yzDJUib6IMS5f5MVExw83NFkOGOOc8532fOEc3tNAD7zlw3uf/e/7vn+clsM1jMBhiKaXE5/MFtyoj/25YLJY9RYUna0wZJishxAhyBfnj8bi7v/QPNDmdQ+MbNZsA5dbyS1k5OU8JcOrVZYYc4QEBYVUMgyZORXYoeME57qy3t7c2RiBRQNkZW1VWVvZLEHgwpJsg02ICpVpBEBmshMI4NTENs7MuSEpNJM7Rsdr2N/Ym2Zv0MpvN+sqKqkkqwM5DuflgMKcRxihQJgJDGnXsnfuN3746ICk5QbB3dORNTY1OyIDK81V3jHrjbWPKbjxamE/oulgGMHFTTI6BYQwEFojbNfeipb25WgbUXrvpQAb5p4tLMVEbTyRhZG10INUuB0P4vqcXNLEab9OThgwZUFdTvyCs0ESbzSaFRiSRDKDSEVjUAVlPrPNVD2o0arj/0K5eA1y/5Q+HV3VlZVY5F0oZUJHKAESUk5LEhJMWgbevezBWHQONjxtUMuDqldo+4PDE8YIi1Ol0hIoMRIECo7jWPQLgAYLLS9jX9wk4UPx69PzeXhlgO1tRp0833E1JSsP8gwUgCowwEUFqHgFwUneewMiYA0PiEpkY/vmgs7f1hgzQajMTLlacm0ReTDOlZuIu/T5gFEjk+JJ1jgeY97vR5ZsCFuaDbV1t2R7P9Fx0kIqLSkoPWPK6+BiijFNr0aDLBI0yUR6UFboEvoALFsN+oCHA74M/LnwcfNcSHaRIzMXHSkpzc440M15IV6g4KTDkiPwl0jyFFzEwPDZU/dnxoe2/UY780Ol08YWHT13WJ2dYVUr1flGgRKTCjGfe3T0y0//M6/X6t7xM213trfb+Am2gP1CTiNCLAAAAAElFTkSuQmCC" />&nbsp;&nbsp;
+		RADIO BUTTON
+		</button>
+		
+        <button onclick="addElement('input_checkbox', 'input');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAkhJREFUOE+lk0toE1EUhv+bxyQTm7QmbRBbfGCoi4pWpjaEDgaxtbrQCkq7EBe6UAjoJuBGXIkboRuFgC7sQsTHqlWCNraL+srCGRRBqIKKTUrIa5pxdCadNBlJZmpTSCvihbu7//efc+5/CP7zkJr+UVsTiHYeGhkE4P4LUwDRJqGRWxjO/tQBD1vDvk07Qt1b93TQVjtVD9A0bRVPKSnq++8fkl/SXyMYyY3qgHttsROBoWCpWFolXqsSYiHqxNvoDE5lD+mAux5uuO8kUygU1qxekiTYbDZQFAWapjHBPeFxOt+jA+64uaHAMUYQhIYAWZbB9T/HWOIBxhL34XA4MPkuxuOsYABuu7kj/sNMPp+Hoig1B7WkoiqUf8l4sz8KQggsFgt2Pw3C4/FgNv2Jx7llQKSF6+8dYFKpFPiBKfjG90FWZWhlDXxwqias3q5nLGAGHLQD87kkj1DBqOBGM3fAf5A54xoBU9kFr9eLzpgffKBOPM0CNr1DykohnUjxuCgagFEX193LMHPZObzc+RhWq/WPa835BQs0rYzHTMzIzaZ5hH8YgOtObhvrY8SiCCwA/N465zgLbFw9WwICgcvwuCQZgGtObvPgFkZZUvSXGeBjzyt0cSzgbfyzC9NZHpeXAVccMe/R9mDJVl4J0jyA9sbiilJRxWhmBldlI0gXbGF754aQPeDqIE7TummsSGW1GBeTi5+VCG4u1qLsRjO2o890HK1aAJqpZd1lIpUCciSO15VxiPhWBdAAnAAs/7jZSwCk36mW1yy5yI3ZAAAAAElFTkSuQmCC" />&nbsp;&nbsp;
+		CHECK BOX
+		</button>
+		
+        <button onclick="addElement('table', 'table');" class="button default" style="text-align:left;">
+		<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAZpJREFUOE+dkstqwkAUhueMN6z0AUpXvoQb1+50I4IihVlImI6JTSQ2IOhCXAipYm1t0yAuslNw51v4HqUPUKh4m5RJCXSRtjSz/PnONwf+A71er+C67gUK8QDgDTqdDu33+y8h5lG3272GdrtNMcZuGAHnHEDX9WvTNC3X/XIAABLSwWBg+1mQXHCGYTDQNI2ZpvnMOfc4jDFqtVp0OBzafhYkEJxhGHWQZZmNRqPn0+nkcZFIBDWbTToej20/CxIITtf1OkiSVJ9MJk/H49HjotEoYoxRy7JsPwsSCE5VVRkIIfJ0Op1+F0iSRGez2Z8CRVEUqFarimVZj4fDwfsoFoshQgh1HMf2s6ANBMcYa0CxWGzM5/OH/X7vcfF4HJXLZbpcLm0/CxIIrlar3UA+n79xHGey2+08LpFIoFKpRFerle1nQQLBEUJUyOVy6mKxuP/eQqFQoOv1+s8WKpWKBtlsVttutx9hLjGZTJ5BOp1ubTabu98q+6nGTCZzC6lU6gpjfBlmA875KyCEkgihc3FD/5SIy3v/BEKcsL5Kc3HDAAAAAElFTkSuQmCC" />&nbsp;&nbsp;
+		TABLE
+		</button>
+    </div>
+</div>
+<!-- EVENTS PANEL -->
+<div id="events" class="panel">
+    <center><h3>EVENTS</h3></center>
+    <label for="onclickCode">OnClick Event Code:</label>
+    <textarea id="txtkods" rows="6" style="width:90%;"></textarea>
+    <button onclick="applyEventCode()" class="button approval">APPLY</button>
+	<button onclick="javascript:divkods.style.display = 'block'; txtcokkods.value = txtkods.value;" class="button approval">BIG WINDOW</button>
+</div>
+
+<div id="properties" class="panel">
+        <center><h3>PROPERTIES</h3></center>
+		<label for="txtid">id:</label>
+        <input type="text" id="txtid" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtid">src:</label>
+        <input type="text" id="txtsrc" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<a href="#" onclick="javascript:resimYukleInput.click();">LOAD</a><br/>
+        <label for="propLeft">X:</label>
+        <input type="text" id="propLeft" oninput="updateProperties()" onkeyup = "updateProperties();">
+        <label for="propTop">Y:</label>
+        <input type="text" id="propTop" oninput="updateProperties()" onkeyup = "updateProperties();">
+        <label for="propWidth">Width:</label>
+        <input type="text" id="propWidth" oninput="updateProperties()" onkeyup = "updateProperties();">
+        <label for="propHeight">Height:</label>
+        <input type="text" id="propHeight" oninput="updateProperties()" onkeyup = "updateProperties();">
+        <label for="propText">Text:</label>
+        <input type="text" id="propText" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtyaziboyut">Font Size:</label>
+        <input type="text" id="txtyaziboyut" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtrenk">Font Color:</label>
+        <select id="txtrenk" onchange = "updateProperties();" style="width:100%; height:35px;">
+			<option></option>
+			<option value="white">White</option>
+			<option value="black">Black</option>
+			<option value="gray">Gray</option>
+			<option value="Gainsboro">Gainsboro</option>
+			<option value="yellow">Yellow</option>
+			<option value="red">Red</option>
+			<option value="maroon">Maroon</option>
+			<option value="blue">Blue</option>
+			<option value="cadetblue">Cadet Blue</option>
+			<option value="purple">Purple</option>
+			<option value="pink">Pink</option>
+			<option value="green">Green</option>
+			<option value="ivory">Ivory</option>
+			<option value="azure">Azure</option>
+			<option value="Orange">Orange</option>
+			<option value="brown">Brown</option>
+		</select>
+		<label for="txtarkaplan">Background Color:</label>
+        <select id="txtarkaplan" onchange = "updateProperties();" style="width:100%; height:35px;">
+			<option></option>
+			<option value="white">White</option>
+			<option value="black">Black</option>
+			<option value="gray">Gray</option>
+			<option value="Gainsboro">Gainsboro</option>
+			<option value="yellow">Yellow</option>
+			<option value="red">Red</option>
+			<option value="maroon">Maroon</option>
+			<option value="blue">Blue</option>
+			<option value="cadetblue">Cadet Blue</option>
+			<option value="purple">Purple</option>
+			<option value="pink">Pink</option>
+			<option value="green">Green</option>
+			<option value="ivory">Ivory</option>
+			<option value="azure">Azure</option>
+			<option value="Orange">Orange</option>
+			<option value="brown">Brown</option>
+		</select>
+		<label for="txtcss">CSS Class:</label>
+        <input type="text" id="txtcss" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtcss">Cell Count:</label>
+        <input type="text" id="txtsutun" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtcss">Row Count:</label>
+        <input type="text" id="txtsatir" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<label for="txtcss">Option:</label>
+        <input type="text" id="txtopt" oninput="updateProperties()" onkeyup = "updateProperties();">
+		<a href="#" class="button default" onclick="javascript:option_ekle();">ADD</a>&nbsp;&nbsp;<a href="#" class="button cancel" onclick="option_sil();">REMOVE</a>&nbsp;&nbsp;
+		<a href="#" class="button cancel" style="position:relative; top:20px;" onclick="javascript:kontrolsil();">DELETE CONTROL</a>
+</div>
+</div>
+
+<div id="design-area"></div>
+
+<div id="divelemans" style="position:absolute; left:333px; top: 45px; width: auto; height: auto; background-color:ivory; border:outset; display:none;z-index:3;">
+		<table>
+			<thead><tr><th colspan="2">ADD NEW CONTROL</th></tr></thead>
+			<tbody>
+				<tr>
+					<td><label>OBJECT TYPE</label></td>
+					<td><label>OBJECT VALUE</label></td>
+				</tr>
+				<tr>
+					<td>
+						<select id="selelemant">
+							<option value="label">LABEL</option>
+							<option value="button">BUTTON</option>
+							<option value="img">IMAGE</option>
+							<option value="text">TEXT BOX</option>
+							<option value="password">PASSWORD BOX</option>
+							<option value="select">COMBOBOX</option>
+							<option value="radio">Radio Button</option>
+							<option value="checkbox">CHECK BOX</option>
+						</select>
+					</td>
+					<td><input type="text" id="txtelemandeger" /></td>
+				</tr>
+				<tr>
+					<td><a href="#" class="button cancel" onclick="javascript:divelemans.style.display = 'none';">CANCEL</a></td>
+					<td><a href="#" class="button default" onclick="javascript:tblelemanekle();">OK</a></td>
+				</tr>
+			</tbody>
+		</table>
+</div>
+
+<div id="divkods" class="draggable" onmousedown="javascript:dragElement(event, this); return false;" style="z-index:3; display:none; position:absolute; left: 300px; top: 40px; width: 80%; height: 666px; background-color:ivory; border: outset; border-radius: 6px; border-color:gray;">
+	<div style="width:97%; margin:3px; background-color:azure; height:35px; border:outset;">
+	<label style="position:relative; left:50%; font-weight:bold;">CODES</label>&nbsp;&nbsp;
+	<a href="#" class="button cancel" style="position:relative; left:66%;" onclick="javascript:txtkods.value = txtcokkods.value; divkods.style.display = 'none';">CLOSE</a>&nbsp;&nbsp;
+	<a href="#" class="button default" style="position:relative; left:76%;" onclick="vbscript:Execute txtcokkods.value">RUN</a>
+	</div>
+	<center>
+	<textarea id="txtcokkods" rows="29" cols="147"></textarea>
+	</center>
+</div>
+<input type="file" id="resimYukleInput" accept="image/*" style="display:none;" onchange="vbscript:ResmiBase64eDonustur(resimYukleInput.value)" />
+<script type="text/javascript">
+	
+</script>
+</body>
+</html>
